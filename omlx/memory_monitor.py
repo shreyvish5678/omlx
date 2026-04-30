@@ -380,7 +380,7 @@ class MemoryMonitor:
 
         Args:
             total_prompt_tokens: Total tokens in the prompt.
-            chunk_size: Prefill step size (default 2048).
+            chunk_size: Prefill step size (default 1024).
 
         Returns:
             Estimated peak memory in bytes (KV cache + SDPA activation).

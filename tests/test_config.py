@@ -164,6 +164,7 @@ class TestSchedulerConfig:
         config = SchedulerConfig()
         assert config.max_num_seqs == 8
         assert config.completion_batch_size == 8
+        assert config.prefill_batch_size == 1024
         assert config.stream_interval == 1
         assert config.enable_thinking is None
 
@@ -172,11 +173,13 @@ class TestSchedulerConfig:
         config = SchedulerConfig(
             max_num_seqs=128,
             completion_batch_size=16,
+            prefill_batch_size=512,
             stream_interval=2,
             enable_thinking=True,
         )
         assert config.max_num_seqs == 128
         assert config.completion_batch_size == 16
+        assert config.prefill_batch_size == 512
         assert config.stream_interval == 2
         assert config.enable_thinking is True
 
@@ -268,6 +271,7 @@ class TestOMLXConfig:
             "OMLX_MAX_TOKENS": "4096",
             "OMLX_TEMPERATURE": "0.5",
             "OMLX_CONTINUOUS_BATCHING": "true",
+            "OMLX_PBS": "768",
         }
         with patch.dict(os.environ, env_vars, clear=True):
             config = OMLXConfig.from_env()
@@ -278,6 +282,7 @@ class TestOMLXConfig:
             assert config.model.trust_remote_code is False
             assert config.generation.max_tokens == 4096
             assert config.generation.temperature == 0.5
+            assert config.scheduler.prefill_batch_size == 768
             assert config.continuous_batching is True
 
     def test_from_env_paged_ssd_cache(self):
@@ -315,6 +320,7 @@ class TestOMLXConfig:
             top_p=0.9,
             top_k=50,
             continuous_batching=True,
+            pbs=512,
             paged_ssd_cache_dir=None,
             paged_ssd_cache_max_size=None,
             mcp_config=None,
@@ -325,6 +331,7 @@ class TestOMLXConfig:
             assert config.server.port == 9000
             assert config.model.model_name == "test-model"
             assert config.generation.max_tokens == 4096
+            assert config.scheduler.prefill_batch_size == 512
             assert config.continuous_batching is True
 
     def test_from_cli_args_paged_ssd_cache(self):

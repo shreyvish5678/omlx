@@ -33,6 +33,8 @@ def _has_cli_overrides(args) -> bool:
         return True
     if hasattr(args, "max_process_memory") and args.max_process_memory is not None:
         return True
+    if hasattr(args, "pbs") and args.pbs is not None:
+        return True
     if hasattr(args, "host") and args.host is not None:
         return True
     if hasattr(args, "log_level") and args.log_level is not None:
@@ -560,6 +562,12 @@ Example directory structure:
         type=int,
         default=None,
         help="Max requests processed simultaneously. Higher values increase throughput but use more memory. (default: 8)",
+    )
+    serve_parser.add_argument(
+        "--pbs",
+        type=int,
+        default=None,
+        help="Prefill batch size, in tokens per prefill step. (default: 1024)",
     )
 
     # paged SSD cache options

@@ -316,7 +316,7 @@ class SchedulerConfig:
     policy: SchedulingPolicy = SchedulingPolicy.FCFS
     # BatchGenerator settings (passed directly to mlx-lm)
     completion_batch_size: int = 32
-    prefill_step_size: int = 2048
+    prefill_step_size: int = 1024
 
     # Paged cache settings (internal defaults)
     paged_cache_block_size: int = 256  # Tokens per block
@@ -954,8 +954,8 @@ class Scheduler:
             self.config.paged_cache_block_size = target_block_size
 
     # Default block size for ArraysCache-only hybrid models.
-    # Match prefill_step_size (2048) so that boundary caching ON/OFF
-    # produces identical prefill chunk sizes, eliminating float32↔dtype
+    # Match the historical prefill_step_size (2048) so that boundary caching
+    # ON/OFF produces identical prefill chunk sizes, eliminating float32↔dtype
     # roundtrip differences in GatedDeltaNet recurrent state.
     _ARRAYS_CACHE_BLOCK_SIZE = 2048
 
@@ -1206,7 +1206,7 @@ class Scheduler:
     ) -> None:
         """Callback from BatchGenerator's prefill loop.
 
-        Called once per prefill chunk (default 2048 tokens) with a list of
+        Called once per prefill chunk (default 1024 tokens) with a list of
         (uid, processed_tokens, total_tokens) tuples.  Updates the global
         PrefillProgressTracker so the admin dashboard can display per-request
         prefill progress.  Only touches CPU counters — zero GPU overhead.

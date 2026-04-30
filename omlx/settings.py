@@ -215,6 +215,7 @@ class SchedulerSettings:
     """Scheduler configuration settings."""
 
     max_concurrent_requests: int = 8
+    prefill_batch_size: int = 1024
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -231,7 +232,12 @@ class SchedulerSettings:
             value = data.get("completion_batch_size")
         if value is None:
             value = 8
-        return cls(max_concurrent_requests=value)
+        pbs = data.get("prefill_batch_size")
+        if pbs is None:
+            pbs = data.get("prefill_step_size")
+        if pbs is None:
+            pbs = 1024
+        return cls(max_concurrent_requests=value, prefill_batch_size=pbs)
 
 
 @dataclass
@@ -831,6 +837,16 @@ class GlobalSettings:
                 logger.warning(
                     f"Invalid OMLX_MAX_CONCURRENT_REQUESTS value: {max_concurrent}"
                 )
+        pbs = (
+            os.getenv("OMLX_PBS")
+            or os.getenv("OMLX_PREFILL_BATCH_SIZE")
+            or os.getenv("OMLX_PREFILL_STEP_SIZE")
+        )
+        if pbs:
+            try:
+                self.scheduler.prefill_batch_size = int(pbs)
+            except ValueError:
+                logger.warning(f"Invalid OMLX_PBS value: {pbs}")
 
         # Cache settings
         if cache_enabled := os.getenv("OMLX_CACHE_ENABLED"):
@@ -920,6 +936,8 @@ class GlobalSettings:
             and args.max_concurrent_requests is not None
         ):
             self.scheduler.max_concurrent_requests = args.max_concurrent_requests
+        if hasattr(args, "pbs") and args.pbs is not None:
+            self.scheduler.prefill_batch_size = args.pbs
 
         # Cache settings
         if hasattr(args, "cache_enabled") and args.cache_enabled is not None:
@@ -1086,6 +1104,11 @@ class GlobalSettings:
                 f"Invalid max_concurrent_requests: "
                 f"{self.scheduler.max_concurrent_requests} (must be > 0)"
             )
+        if self.scheduler.prefill_batch_size <= 0:
+            errors.append(
+                f"Invalid prefill_batch_size: "
+                f"{self.scheduler.prefill_batch_size} (must be > 0)"
+            )
 
         # Cache validation
         if self.cache.ssd_cache_max_size.lower() != "auto":
@@ -1187,6 +1210,7 @@ class GlobalSettings:
         return SchedulerConfig(
             max_num_seqs=self.scheduler.max_concurrent_requests,
             completion_batch_size=self.scheduler.max_concurrent_requests,
+            prefill_step_size=self.scheduler.prefill_batch_size,
             initial_cache_blocks=self.cache.initial_cache_blocks,
             paged_ssd_cache_dir=str(ssd_dir) if ssd_dir else None,
             hot_cache_only=self.cache.hot_cache_only,

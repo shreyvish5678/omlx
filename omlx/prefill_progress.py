@@ -22,7 +22,7 @@ class PrefillProgressTracker:
     when processed >= total (prefill complete).
 
     Performance: ~50ns lock acquire/release + O(1) dict write per update.
-    Called once per prefill chunk (default 2048 tokens).
+    Called once per prefill chunk (default 1024 tokens).
     """
 
     def __init__(self) -> None:

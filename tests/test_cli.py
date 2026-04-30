@@ -159,6 +159,7 @@ class TestServeCommandOptions:
             timeout=10,
         )
         assert "--max-concurrent-requests" in result.stdout
+        assert "--pbs" in result.stdout
 
     def test_serve_has_cache_options(self):
         """Test that serve command has cache options."""

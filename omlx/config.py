@@ -88,6 +88,7 @@ class SchedulerConfig:
 
     max_num_seqs: int = 8
     completion_batch_size: int = 8
+    prefill_batch_size: int = 1024
     stream_interval: int = 1
     enable_thinking: Optional[bool] = None
 
@@ -197,6 +198,9 @@ class OMLXConfig:
         config.continuous_batching = os.getenv(
             "OMLX_CONTINUOUS_BATCHING", "false"
         ).lower() == "true"
+        pbs = os.getenv("OMLX_PBS") or os.getenv("OMLX_PREFILL_BATCH_SIZE")
+        if pbs:
+            config.scheduler.prefill_batch_size = int(pbs)
 
         return config
 
@@ -237,6 +241,8 @@ class OMLXConfig:
 
         if hasattr(args, "continuous_batching"):
             config.continuous_batching = args.continuous_batching
+        if hasattr(args, "pbs") and args.pbs is not None:
+            config.scheduler.prefill_batch_size = args.pbs
 
         # Paged SSD cache settings
         if hasattr(args, "hot_cache_only") and args.hot_cache_only is not None:

@@ -443,7 +443,7 @@ def score_tokens(
     pool_kernel: int = 13,
     temp: float = 0.6,
     top_p: float = 0.95,
-    prefill_step_size: int = 2048,
+    prefill_step_size: int = 1024,
     query_extractor: Optional[Callable] = None,
     existing_cache: Optional[List[Any]] = None,
 ) -> Tuple[mx.array, Any]:
@@ -730,7 +730,7 @@ def sparse_prefill(
     tokens,
     selected_indices,
     cache,
-    step_size: int = 2048,
+    step_size: int = 1024,
     position_offset: int = 0,
 ) -> mx.array:
     """Prefill model cache with selected tokens at their original positions.
