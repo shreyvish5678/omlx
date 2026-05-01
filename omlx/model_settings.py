@@ -53,6 +53,7 @@ class ModelSettings:
         thinking_budget_enabled: Whether a thinking token budget is active.
         thinking_budget_tokens: Max tokens for thinking/reasoning.
         reasoning_parser: xgrammar builtin name: "qwen", "harmony", "llama", etc.
+        affine_quantized_kv_enabled: Enable affine q4 KV cache compression.
         turboquant_kv_enabled: Enable TurboQuant KV cache compression.
         turboquant_kv_bits: TurboQuant bit depth (2/2.5/3/3.5/4/6/8).
         turboquant_skip_last: Skip last KVCache layer to prevent corruption.
@@ -93,7 +94,8 @@ class ModelSettings:
     thinking_budget_tokens: Optional[int] = None
     reasoning_parser: Optional[str] = None  # xgrammar builtin name: "qwen", "harmony", "llama", etc.
 
-    # TurboQuant KV cache (mlx-vlm backend)
+    # Quantized KV cache modes (mlx-vlm backend)
+    affine_quantized_kv_enabled: bool = False
     turboquant_kv_enabled: bool = False
     turboquant_kv_bits: float = 4  # 2, 2.5, 3, 3.5, 4, 6, 8
     turboquant_skip_last: bool = True  # Skip last KVCache layer (prevents corruption on sensitive models)

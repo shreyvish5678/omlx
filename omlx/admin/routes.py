@@ -115,7 +115,8 @@ class ModelSettingsRequest(BaseModel):
     enable_thinking: Optional[bool] = None
     thinking_budget_enabled: Optional[bool] = None
     thinking_budget_tokens: Optional[int] = None
-    # TurboQuant KV cache (mlx-vlm backend)
+    # Quantized KV cache modes (mlx-vlm backend)
+    affine_quantized_kv_enabled: Optional[bool] = None
     turboquant_kv_enabled: Optional[bool] = None
     turboquant_kv_bits: Optional[float] = None
     # SpecPrefill (experimental)
@@ -1422,6 +1423,7 @@ async def list_models(is_admin: bool = Depends(require_admin)):
                 "forced_ct_kwargs": settings.forced_ct_kwargs,
                 "ttl_seconds": settings.ttl_seconds,
                 "index_cache_freq": settings.index_cache_freq,
+                "affine_quantized_kv_enabled": settings.affine_quantized_kv_enabled,
                 "turboquant_kv_enabled": settings.turboquant_kv_enabled,
                 "turboquant_kv_bits": settings.turboquant_kv_bits,
                 "specprefill_enabled": settings.specprefill_enabled,
@@ -1638,11 +1640,19 @@ async def update_model_settings(
             if request.index_cache_freq and request.index_cache_freq >= 2
             else None
         )
-    # TurboQuant KV cache settings
+    # Quantized KV cache settings
+    if "affine_quantized_kv_enabled" in sent:
+        current_settings.affine_quantized_kv_enabled = (
+            request.affine_quantized_kv_enabled or False
+        )
     if "turboquant_kv_enabled" in sent:
         current_settings.turboquant_kv_enabled = request.turboquant_kv_enabled or False
     if "turboquant_kv_bits" in sent:
         current_settings.turboquant_kv_bits = request.turboquant_kv_bits or 4
+    if current_settings.affine_quantized_kv_enabled:
+        current_settings.turboquant_kv_enabled = False
+    elif current_settings.turboquant_kv_enabled:
+        current_settings.affine_quantized_kv_enabled = False
     # SpecPrefill settings
     if "specprefill_enabled" in sent:
         current_settings.specprefill_enabled = request.specprefill_enabled or False

@@ -1541,7 +1541,8 @@
                     ttl_seconds: settings.ttl_seconds ?? null,
                     enableIndexCache: !!(settings.index_cache_freq),
                     index_cache_freq: settings.index_cache_freq || null,
-                    turboquant_kv_enabled: settings.turboquant_kv_enabled || false,
+                    affine_quantized_kv_enabled: settings.affine_quantized_kv_enabled || false,
+                    turboquant_kv_enabled: settings.affine_quantized_kv_enabled ? false : (settings.turboquant_kv_enabled || false),
                     turboquant_kv_bits: settings.turboquant_kv_bits || 4,
                     specprefill_enabled: settings.specprefill_enabled || false,
                     specprefill_draft_model: settings.specprefill_draft_model || '',
@@ -1614,8 +1615,11 @@
                                     ? chatTemplateKwargs : null,
                                 forced_ct_kwargs: forcedCtKwargs.length > 0
                                     ? forcedCtKwargs : null,
-                                turboquant_kv_enabled: this.modelSettings.turboquant_kv_enabled,
-                                turboquant_kv_bits: this.modelSettings.turboquant_kv_enabled
+                                affine_quantized_kv_enabled: this.modelSettings.affine_quantized_kv_enabled,
+                                turboquant_kv_enabled: this.modelSettings.affine_quantized_kv_enabled
+                                    ? false
+                                    : this.modelSettings.turboquant_kv_enabled,
+                                turboquant_kv_bits: (!this.modelSettings.affine_quantized_kv_enabled && this.modelSettings.turboquant_kv_enabled)
                                     ? (parseFloat(this.modelSettings.turboquant_kv_bits) || 4)
                                     : 4,
                                 specprefill_enabled: this.modelSettings.specprefill_enabled,
@@ -1685,6 +1689,7 @@
                         this.modelSettings.enableToolResultLimit = false;
                         this.modelSettings.max_tool_result_tokens = 0;
                         this.modelSettings.ctKwargEntries = [];
+                        this.modelSettings.affine_quantized_kv_enabled = false;
                         this.modelSettings.turboquant_kv_enabled = false;
                         this.modelSettings.turboquant_kv_bits = 4;
                         this.modelSettings.specprefill_enabled = false;

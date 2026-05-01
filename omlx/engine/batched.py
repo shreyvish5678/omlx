@@ -231,12 +231,23 @@ class BatchedEngine(BaseEngine):
             self._model, self._model_settings
         )
 
-        # TurboQuant KV cache: patch attention and set kv_bits on scheduler
+        # Quantized KV cache: patch attention and set scheduler mode
         if self._model_settings is not None:
+            affine_enabled = getattr(
+                self._model_settings, "affine_quantized_kv_enabled", False
+            )
             tq_enabled = getattr(self._model_settings, "turboquant_kv_enabled", False)
-            if tq_enabled:
+            if affine_enabled and tq_enabled:
+                logger.warning(
+                    "Both affine q4 KV and TurboQuant KV are enabled; using affine q4 KV"
+                )
+                tq_enabled = False
+            if affine_enabled or tq_enabled:
                 from ..patches.turboquant_attention import apply_turboquant_attention_patch
                 apply_turboquant_attention_patch()
+            if affine_enabled:
+                logger.info("Affine q4 KV cache enabled")
+            elif tq_enabled:
                 tq_bits = float(getattr(self._model_settings, "turboquant_kv_bits", 4))
                 logger.info(f"TurboQuant KV cache enabled: {tq_bits} bits")
 
@@ -258,10 +269,17 @@ class BatchedEngine(BaseEngine):
 
         await self._engine.engine.start()
 
-        # TurboQuant KV cache: propagate bits to scheduler
+        # Quantized KV cache: propagate mode to scheduler
         if self._model_settings is not None:
+            affine_enabled = getattr(
+                self._model_settings, "affine_quantized_kv_enabled", False
+            )
             tq_enabled = getattr(self._model_settings, "turboquant_kv_enabled", False)
-            if tq_enabled:
+            if affine_enabled and tq_enabled:
+                tq_enabled = False
+            if affine_enabled:
+                self._engine.engine.scheduler._affine_quantized_kv_enabled = True
+            elif tq_enabled:
                 tq_bits = float(getattr(self._model_settings, "turboquant_kv_bits", 4))
                 self._engine.engine.scheduler._turboquant_kv_bits = tq_bits
                 self._engine.engine.scheduler._turboquant_skip_last = getattr(

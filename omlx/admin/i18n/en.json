@@ -652,5 +652,7 @@
   "js.error.delete_model_failed": "Failed to delete model",
   "js.error.delete_model_connection": "Failed to delete model. Check server connection.",
   "js.success.download_started": "Download started: {repo_id}",
-  "js.success.settings_saved": "Settings saved successfully"
+  "js.success.settings_saved": "Settings saved successfully",
+  "modal.model_settings.affine_quantized_kv": "Affine q4 KV Cache",
+  "modal.model_settings.affine_quantized_kv_hint": "Use MLX affine q4 KV cache for long-context prefill. Mutually exclusive with TurboQuant."
 }

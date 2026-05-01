@@ -650,5 +650,7 @@
   "js.error.delete_model_connection": "Не удалось удалить модель. Проверьте соединение с сервером.",
   "js.success.download_started": "Загрузка начата: {repo_id}",
   "js.success.settings_saved": "Настройки успешно сохранены",
-  "settings.language.ru": "Русский"
+  "settings.language.ru": "Русский",
+  "modal.model_settings.affine_quantized_kv": "Affine q4 KV Cache",
+  "modal.model_settings.affine_quantized_kv_hint": "Use MLX affine q4 KV cache for long-context prefill. Mutually exclusive with TurboQuant."
 }

@@ -17,6 +17,70 @@ logger = logging.getLogger(__name__)
 _PATCHED = False
 
 
+def _is_quantized_tuple(value) -> bool:
+    return (
+        isinstance(value, tuple)
+        and len(value) == 3
+        and all(isinstance(v, mx.array) for v in value)
+    )
+
+
+def _is_affine_quantized_cache(cache) -> bool:
+    try:
+        from mlx_lm.models.cache import QuantizedKVCache
+        from ..quantized_kv import AffineQuantizedKVCache, BatchQuantizedKVCache
+    except ImportError:
+        return False
+
+    return isinstance(
+        cache, (QuantizedKVCache, AffineQuantizedKVCache, BatchQuantizedKVCache)
+    )
+
+
+def _affine_quantized_attention(
+    queries,
+    keys,
+    values,
+    cache,
+    scale: float,
+    mask: Optional[mx.array],
+    sinks: Optional[mx.array],
+):
+    real_cache = cache
+    if hasattr(cache, "_cache") and not _is_affine_quantized_cache(cache):
+        real_cache = cache._cache
+
+    if not _is_affine_quantized_cache(real_cache):
+        return None
+    if not (_is_quantized_tuple(keys) and _is_quantized_tuple(values)):
+        return None
+    if sinks is not None:
+        raise ValueError("Affine quantized SDPA does not support attention sinks.")
+    if not hasattr(mx.fast, "quantized_scaled_dot_product_attention"):
+        raise RuntimeError(
+            "Affine q4 KV cache requires mlx.fast.quantized_scaled_dot_product_attention"
+        )
+    if queries.shape[-2] > 8:
+        if queries.shape[-1] != 256:
+            raise RuntimeError(
+                "Affine q4 long prefill currently requires head_dim=256 for the fused MLX path."
+            )
+        if mask is not None and not isinstance(mask, str):
+            raise RuntimeError(
+                "Affine q4 long prefill requires a causal or empty mask for the fused MLX path."
+            )
+
+    return mx.fast.quantized_scaled_dot_product_attention(
+        queries,
+        keys,
+        values,
+        scale=scale,
+        mask=mask,
+        group_size=real_cache.group_size,
+        bits=real_cache.bits,
+    )
+
+
 def apply_turboquant_attention_patch() -> bool:
     """Monkey-patch mlx-lm's scaled_dot_product_attention for TurboQuant."""
     global _PATCHED
@@ -41,6 +105,12 @@ def apply_turboquant_attention_patch() -> bool:
     ) -> mx.array:
         from mlx_vlm.turboquant import TurboQuantKVCache as _TQCache
         from ..turboquant_kv import BatchTurboQuantKVCache
+
+        affine_result = _affine_quantized_attention(
+            queries, keys, values, cache, scale, mask, sinks
+        )
+        if affine_result is not None:
+            return affine_result
 
         # Detect underlying TQ cache (may be wrapped by proxy objects)
         real_cache = cache

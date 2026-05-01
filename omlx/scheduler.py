@@ -174,6 +174,12 @@ try:
 except ImportError:
     pass
 
+try:
+    from .quantized_kv import install_quantized_kv_merge_patch
+    install_quantized_kv_merge_patch()
+except ImportError:
+    pass
+
 
 # ---------------------------------------------------------------------------
 # Monkey-patch PromptProcessingBatch.prompt to set mRoPE deltas before the
@@ -201,6 +207,7 @@ PromptProcessingBatch.prompt = _patched_ppb_prompt
 # Cache class names known to be sliceable (no boundary snapshots needed).
 _KNOWN_SLICEABLE_CACHE_TYPES = frozenset({
     "KVCache", "BatchKVCache", "QuantizedKVCache",
+    "AffineQuantizedKVCache", "BatchQuantizedKVCache",
     "TurboQuantKVCache", "BatchTurboQuantKVCache",
 })
 
@@ -464,7 +471,8 @@ class Scheduler:
         # size to reduce boundary snapshot overhead during prefill.
         self._enlarge_block_size_for_arrays_cache()
 
-        # TurboQuant KV cache (set by engine if model_settings has it enabled)
+        # Quantized KV cache modes (set by engine if model_settings has them enabled)
+        self._affine_quantized_kv_enabled: bool = False
         self._turboquant_kv_bits: Optional[float] = None
         self._turboquant_skip_last: bool = True
 
@@ -1233,6 +1241,65 @@ class Scheduler:
     # External prefill (composition pattern — replaces _process_prompts)
     # ------------------------------------------------------------------
 
+    def _use_affine_q4_external_prefill(self) -> bool:
+        if not self._affine_quantized_kv_enabled:
+            return False
+        if not hasattr(mx.fast, "quantized_scaled_dot_product_attention"):
+            raise RuntimeError(
+                "Affine q4 KV cache requires mlx.fast.quantized_scaled_dot_product_attention"
+            )
+        return True
+
+    def _apply_affine_q4_kv_empty(self, prompt_cache: List[Any]) -> None:
+        """Replace full-attention KVCache layers with affine q4 caches."""
+        from mlx_lm.models.cache import CacheList, KVCache
+        from .quantized_kv import AffineQuantizedKVCache
+
+        converted = 0
+        for i, cache_obj in enumerate(prompt_cache):
+            if isinstance(cache_obj, KVCache):
+                prompt_cache[i] = AffineQuantizedKVCache(group_size=64, bits=4)
+                converted += 1
+            elif isinstance(cache_obj, CacheList):
+                new_caches = []
+                for c in cache_obj.caches:
+                    if isinstance(c, KVCache):
+                        new_caches.append(AffineQuantizedKVCache(group_size=64, bits=4))
+                        converted += 1
+                    else:
+                        new_caches.append(c)
+                cache_obj.caches = tuple(new_caches)
+        if converted > 0:
+            logger.info("Affine q4 KV: %s cache layers enabled", converted)
+
+    def _apply_affine_q4_kv_convert(self, prompt_cache: List[Any]) -> None:
+        """Convert existing full-attention KVCache layers to affine q4 caches."""
+        from mlx_lm.models.cache import CacheList, KVCache
+        from .quantized_kv import AffineQuantizedKVCache
+
+        converted = 0
+        for i, cache_obj in enumerate(prompt_cache):
+            if isinstance(cache_obj, KVCache):
+                prompt_cache[i] = AffineQuantizedKVCache.from_cache(
+                    cache_obj, group_size=64, bits=4
+                )
+                converted += 1
+            elif isinstance(cache_obj, CacheList):
+                new_caches = []
+                for c in cache_obj.caches:
+                    if isinstance(c, KVCache):
+                        new_caches.append(
+                            AffineQuantizedKVCache.from_cache(
+                                c, group_size=64, bits=4
+                            )
+                        )
+                        converted += 1
+                    else:
+                        new_caches.append(c)
+                cache_obj.caches = tuple(new_caches)
+        if converted > 0:
+            logger.info("Affine q4 KV: converted %s cache layers", converted)
+
     def _apply_turboquant_kv_empty(self, prompt_cache: List[Any]) -> None:
         """Replace KVCache with empty TurboQuantKVCache before prefill.
 
@@ -1346,27 +1413,26 @@ class Scheduler:
         if n_tokens <= 1:
             # Nothing to prefill, return cache + tokens as-is
             cache = existing_cache or make_prompt_cache(self.model)
-            # NOTE: Do NOT apply TurboQuant here. TurboQuantKVCache does not
-            # support merge(), which is called by _merge_caches() inside
-            # BatchGenerator when insert() creates a PromptProcessingBatch.
-            # TurboQuant conversion must happen inside BatchGenerator after
-            # the batch cache is created, not on individual per-request caches.
+            if self._use_affine_q4_external_prefill():
+                if existing_cache is not None:
+                    self._apply_affine_q4_kv_convert(cache)
+                else:
+                    self._apply_affine_q4_kv_empty(cache)
             return cache, tokens
 
         # Create or reuse cache
         if existing_cache is not None:
             prompt_cache = existing_cache
+            if self._use_affine_q4_external_prefill():
+                self._apply_affine_q4_kv_convert(prompt_cache)
         else:
             prompt_cache = make_prompt_cache(self.model)
+            if self._use_affine_q4_external_prefill():
+                self._apply_affine_q4_kv_empty(prompt_cache)
 
-        # NOTE: TurboQuant conversion is NOT applied during external prefill.
-        # TurboQuantKVCache does not support merge() or maybe_trim_front(),
-        # so passing it to insert() would fail in _merge_caches() or cause
-        # AttributeError in chunked-attention models (e.g. Llama-4-Scout).
-        # Additionally, on-the-fly quantization during prefill causes
-        # precision loss that corrupts hidden states across layers (#771).
-        # Prefill runs with standard KVCache; TurboQuant quantization
-        # happens inside BatchGenerator during the decode phase.
+        # TurboQuant conversion is not applied during external prefill. Affine
+        # q4 uses BatchQuantizedKVCache above so insert()/merge/filter/extract
+        # can keep the packed q4 state resident from the first chunk onward.
 
         # Clear stale mRoPE position state for text-only requests.
         if vlm_embeds is None and hasattr(self.model, "clear_vlm_position_state"):
