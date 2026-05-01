@@ -61,9 +61,9 @@ def _affine_quantized_attention(
             "Affine q4 KV cache requires mlx.fast.quantized_scaled_dot_product_attention"
         )
     if queries.shape[-2] > 8:
-        if queries.shape[-1] != 256:
+        if queries.shape[-1] not in (256, 512):
             raise RuntimeError(
-                "Affine q4 long prefill currently requires head_dim=256 for the fused MLX path."
+                "Affine q4 long prefill currently requires head_dim=256 or 512 for the fused MLX path."
             )
         if mask is not None and not isinstance(mask, str):
             raise RuntimeError(
