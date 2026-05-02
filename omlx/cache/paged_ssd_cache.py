@@ -74,11 +74,13 @@ _MAX_PENDING_WRITES = _compute_max_pending_writes()
 # Cache format version. Bump when on-disk layout or RotatingKVCache meta_state
 # semantics change in a way that older blocks become unsafe to load.
 #
+# Version "3": stores AffineQuantizedKVCache layers as dense KV blocks so
+#   affine q4 models do not persist 48/64-layer partial blocks.
 # Version "2": added with the mlx-lm 0.31.3 contract fix (issues #934 / #903).
 # Version "1" / unset: pre-fix blocks. RotatingKVCache layers may have been
 #   zero-padded to max_size, which after the fix would leak zero positions
 #   into attention. Treat such blocks as a cache miss instead of migrating.
-_CACHE_FORMAT_VERSION = "2"
+_CACHE_FORMAT_VERSION = "3"
 
 
 # Layer cache type names whose meta_state should be clamped on save so the
@@ -2142,4 +2144,3 @@ class PagedSSDCacheManager(CacheManager):
             Configured maximum cache size in bytes.
         """
         return self._max_size
-

@@ -2522,6 +2522,8 @@ class Scheduler:
                             'meta_state': meta,
                             'class_name': class_name,
                             'cache_type': cache_type_name,
+                            'group_size': getattr(layer_cache, 'group_size', 64),
+                            'bits': getattr(layer_cache, 'bits', 4),
                         })
                     else:
                         # Unexpected state format

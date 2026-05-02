@@ -813,6 +813,50 @@ class BlockAwarePrefixCache(CacheManager):
                         '__turboquant_v2__',
                         (ks, vs),
                     ))
+                elif cache_type_name in ('AffineQuantizedKVCache', 'BatchQuantizedKVCache'):
+                    # Affine q4 state is (quantized, scales, biases) for keys
+                    # and values. Slice the packed tensors along time, then
+                    # store dense KV blocks so the existing SSD format and
+                    # reconstruction path can preserve the full layer count.
+                    state = layer_state['state']
+                    if not isinstance(state, (list, tuple)) or len(state) < 2:
+                        logger.debug(
+                            f"Layer {layer_idx}: unexpected state for {cache_type_name}"
+                        )
+                        continue
+                    keys_state, values_state = state[0], state[1]
+                    if (
+                        not isinstance(keys_state, (list, tuple))
+                        or not isinstance(values_state, (list, tuple))
+                        or len(keys_state) < 2
+                        or len(values_state) < 2
+                    ):
+                        logger.debug(
+                            f"Layer {layer_idx}: unexpected tensor shape for {cache_type_name}"
+                        )
+                        continue
+                    seq_len = keys_state[0].shape[2]
+                    actual_end = min(end_idx, seq_len)
+                    if start_idx >= actual_end:
+                        continue
+                    keys_slice_state = [
+                        x[:, :, start_idx:actual_end, :] for x in keys_state
+                    ]
+                    values_slice_state = [
+                        x[:, :, start_idx:actual_end, :] for x in values_state
+                    ]
+                    group_size = int(layer_state.get('group_size', 64))
+                    bits = int(layer_state.get('bits', 4))
+                    keys_slice = mx.dequantize(
+                        *keys_slice_state, group_size=group_size, bits=bits
+                    )
+                    values_slice = mx.dequantize(
+                        *values_slice_state, group_size=group_size, bits=bits
+                    )
+                    block_slices.append((
+                        self._clone_tensor(keys_slice),
+                        self._clone_tensor(values_slice),
+                    ))
                 elif handler.supports_block_slicing:
                     # Standard 4D KV cache slicing
                     state = layer_state['state']

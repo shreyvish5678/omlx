@@ -178,6 +178,36 @@ class TestBlockAwarePrefixCache:
         assert result.request_id == "req-001"
         assert "req-001" in prefix_cache._request_tables
 
+    def test_affine_quantized_layers_are_sliced_without_dropping_layer(self, prefix_cache):
+        """Affine q4 layers should store dense KV slices instead of being skipped."""
+        mx = pytest.importorskip("mlx.core")
+        keys = mx.random.normal((1, 2, 8, 64))
+        values = mx.random.normal((1, 2, 8, 64))
+        q_keys = mx.quantize(keys, group_size=64, bits=4)
+        q_values = mx.quantize(values, group_size=64, bits=4)
+        cache_data = [{
+            "state": (q_keys, q_values),
+            "cache_type": "KVCache",
+            "class_name": "AffineQuantizedKVCache",
+            "group_size": 64,
+            "bits": 4,
+        }]
+        from omlx.cache.hybrid_cache import ModelCacheConfig
+
+        config = ModelCacheConfig.from_type_list(["AffineQuantizedKVCache"])
+        block_data = prefix_cache._extract_block_tensor_slice(
+            cache_data,
+            0,
+            4,
+            config,
+        )
+
+        assert block_data is not None
+        assert len(block_data) == 1
+        dense_keys, dense_values = block_data[0]
+        assert dense_keys.shape == (1, 2, 4, 64)
+        assert dense_values.shape == (1, 2, 4, 64)
+
     def test_release_cache(self, prefix_cache, paged_cache):
         """Test releasing cache for a request."""
         # First create a block table with blocks

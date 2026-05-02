@@ -54,6 +54,10 @@ class CacheTypeRegistry:
         "BatchRotatingKVCache": CacheType.BATCH_ROTATING_KVCACHE,
         "ArraysCache": CacheType.ARRAYS_CACHE,
         "QuantizedKVCache": CacheType.QUANTIZED_KVCACHE,
+        # oMLX affine q4 caches are sliceable by token position. They are
+        # stored as dense KV blocks by prefix_cache for SSD compatibility.
+        "AffineQuantizedKVCache": CacheType.KVCACHE,
+        "BatchQuantizedKVCache": CacheType.KVCACHE,
         "CacheList": CacheType.CACHE_LIST,
         # TurboQuant: handled specially in prefix_cache/paged_ssd_cache,
         # mapped to KVCACHE so supports_block_slicing = True (but prefix_cache
