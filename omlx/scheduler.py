@@ -323,7 +323,7 @@ class SchedulerConfig:
     policy: SchedulingPolicy = SchedulingPolicy.FCFS
     # BatchGenerator settings (passed directly to mlx-lm)
     completion_batch_size: int = 32
-    prefill_step_size: int = 1024
+    prefill_step_size: int = 2048
 
     # Paged cache settings (internal defaults)
     paged_cache_block_size: int = 256  # Tokens per block

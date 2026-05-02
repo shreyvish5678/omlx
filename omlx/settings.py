@@ -215,7 +215,7 @@ class SchedulerSettings:
     """Scheduler configuration settings."""
 
     max_concurrent_requests: int = 8
-    prefill_batch_size: int = 1024
+    prefill_batch_size: int = 2048
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -236,7 +236,7 @@ class SchedulerSettings:
         if pbs is None:
             pbs = data.get("prefill_step_size")
         if pbs is None:
-            pbs = 1024
+            pbs = 2048
         return cls(max_concurrent_requests=value, prefill_batch_size=pbs)
 
 

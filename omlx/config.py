@@ -88,7 +88,7 @@ class SchedulerConfig:
 
     max_num_seqs: int = 8
     completion_batch_size: int = 8
-    prefill_batch_size: int = 1024
+    prefill_batch_size: int = 2048
     stream_interval: int = 1
     enable_thinking: Optional[bool] = None
 

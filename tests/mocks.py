@@ -43,7 +43,7 @@ class MockBatchGenerator:
         # Store constructor arguments for testing
         self.prefill_batch_size = kwargs.get("prefill_batch_size", 1)
         self.completion_batch_size = kwargs.get("completion_batch_size", 32)
-        self.prefill_step_size = kwargs.get("prefill_step_size", 1024)
+        self.prefill_step_size = kwargs.get("prefill_step_size", 2048)
 
     def insert(
         self,

@@ -252,7 +252,7 @@ class TestSchedulerSettings:
         """Test default values."""
         settings = SchedulerSettings()
         assert settings.max_concurrent_requests == 8
-        assert settings.prefill_batch_size == 1024
+        assert settings.prefill_batch_size == 2048
 
     def test_custom_values(self):
         """Test custom values."""
@@ -269,7 +269,7 @@ class TestSchedulerSettings:
         result = settings.to_dict()
         assert result == {
             "max_concurrent_requests": 8,
-            "prefill_batch_size": 1024,
+            "prefill_batch_size": 2048,
         }
 
     def test_from_dict(self):
@@ -284,12 +284,12 @@ class TestSchedulerSettings:
         data = {"max_num_seqs": 64}
         settings = SchedulerSettings.from_dict(data)
         assert settings.max_concurrent_requests == 64
-        assert settings.prefill_batch_size == 1024
+        assert settings.prefill_batch_size == 2048
 
         data = {"completion_batch_size": 32}
         settings = SchedulerSettings.from_dict(data)
         assert settings.max_concurrent_requests == 32
-        assert settings.prefill_batch_size == 1024
+        assert settings.prefill_batch_size == 2048
 
         data = {"prefill_step_size": 2048}
         settings = SchedulerSettings.from_dict(data)
@@ -1335,7 +1335,7 @@ class TestGlobalSettings:
         scheduler_config = settings.to_scheduler_config()
         assert scheduler_config.max_num_seqs == 128
         assert scheduler_config.completion_batch_size == 128
-        assert scheduler_config.prefill_step_size == 1024
+        assert scheduler_config.prefill_step_size == 2048
         assert scheduler_config.initial_cache_blocks == 256  # default
 
     def test_to_scheduler_config_initial_cache_blocks(self):

@@ -567,7 +567,7 @@ Example directory structure:
         "--pbs",
         type=int,
         default=None,
-        help="Prefill batch size, in tokens per prefill step. (default: 1024)",
+        help="Prefill batch size, in tokens per prefill step. (default: 2048)",
     )
 
     # paged SSD cache options

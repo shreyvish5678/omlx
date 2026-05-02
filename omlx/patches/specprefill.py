@@ -443,7 +443,7 @@ def score_tokens(
     pool_kernel: int = 13,
     temp: float = 0.6,
     top_p: float = 0.95,
-    prefill_step_size: int = 1024,
+    prefill_step_size: int = 2048,
     query_extractor: Optional[Callable] = None,
     existing_cache: Optional[List[Any]] = None,
 ) -> Tuple[mx.array, Any]:
