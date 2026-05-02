@@ -28,6 +28,8 @@ class GenerationOutput:
     tool_calls: Optional[List[Dict[str, Any]]] = None
     # Prefix cache stats
     cached_tokens: int = 0
+    # Engine-specific diagnostics such as speculative decoding metrics.
+    metrics: Dict[str, Any] = field(default_factory=dict)
 
 
 class BaseEngine(ABC):

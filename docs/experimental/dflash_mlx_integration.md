@@ -28,7 +28,7 @@ Key distinction from traditional speculative decoding: the draft model uses **bl
 ```
 API Request → server.py → engine_pool.py
                               │
-                              ├─ prompt < DFLASH_MAX_CTX (4096)
+                              ├─ prompt < DFLASH_MAX_CTX (262144)
                               │     └─ DFlashEngine
                               │           └─ stream_dflash_generate()  [dflash-mlx]
                               │                 └─ draft/verify loop (internal)
@@ -167,7 +167,7 @@ DFlashEngine processes one request at a time. No continuous batching — the ent
 DFlash effectiveness degrades with long contexts:
 - Draft model trained on max sequence length 3072-4096 tokens
 - Verify pass attention cost grows with KV cache size
-- Default `DFLASH_MAX_CTX = 4096` (configurable via environment variable)
+- Default `DFLASH_MAX_CTX = 262144` (configurable via environment variable)
 - Beyond threshold, automatic fallback to BatchedEngine/VLMBatchedEngine
 
 ### 3. Model support
@@ -229,7 +229,7 @@ DFlash check runs **before** engine type routing in `_load_engine()`. If `dflash
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DFLASH_MAX_CTX` | 4096 | Max prompt tokens before fallback to AR |
+| `DFLASH_MAX_CTX` | 262144 | Max prompt tokens before fallback to AR |
 | `DFLASH_VERIFY_LEN` | block_size | Cap on verify block length |
 | `DFLASH_DRAFT_SINK` | 64 | Draft KV cache sink size |
 | `DFLASH_DRAFT_WINDOW` | 1024 | Draft KV cache window size |

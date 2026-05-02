@@ -139,6 +139,7 @@ def _compute_single_metrics(
     end_time: float,
     peak_memory: int,
     cached_tokens: int,
+    engine_metrics: dict | None = None,
 ) -> dict:
     """Compute all metrics for a single request benchmark."""
     ttft_s = first_token_time - start_time
@@ -151,7 +152,7 @@ def _compute_single_metrics(
     processing_tps = prompt_tokens / max(ttft_s, 1e-9)
     total_throughput = (prompt_tokens + completion_tokens) / max(e2e_duration, 1e-9)
 
-    return {
+    result = {
         "ttft_ms": round(ttft_ms, 1),
         "tpot_ms": round(tpot_ms, 2),
         "gen_tps": round(gen_tps, 1),
@@ -163,6 +164,19 @@ def _compute_single_metrics(
         "completion_tokens": completion_tokens,
         "cached_tokens": cached_tokens,
     }
+    if engine_metrics:
+        result["engine_metrics"] = engine_metrics
+        if "acceptance_ratio" in engine_metrics:
+            result["dflash_acceptance_ratio"] = engine_metrics["acceptance_ratio"]
+        if "cycles_completed" in engine_metrics:
+            result["dflash_cycles_completed"] = engine_metrics["cycles_completed"]
+        if "tokens_per_cycle" in engine_metrics:
+            result["dflash_tokens_per_cycle"] = engine_metrics["tokens_per_cycle"]
+        if "fallback_ar" in engine_metrics:
+            result["dflash_fallback_ar"] = engine_metrics["fallback_ar"]
+        if engine_metrics.get("fallback_reason"):
+            result["dflash_fallback_reason"] = engine_metrics["fallback_reason"]
+    return result
 
 
 async def _send_event(run: BenchmarkRun, event: dict) -> None:
@@ -216,6 +230,7 @@ async def _run_single_test(
     prompt_tokens = last_output.prompt_tokens if last_output else 0
     completion_tokens = last_output.completion_tokens if last_output else 0
     cached_tokens = last_output.cached_tokens if last_output else 0
+    engine_metrics = last_output.metrics if last_output else None
 
     if cached_tokens > 0:
         logger.warning(
@@ -231,6 +246,7 @@ async def _run_single_test(
         end_time=end_time,
         peak_memory=peak_memory,
         cached_tokens=cached_tokens,
+        engine_metrics=engine_metrics,
     )
 
 

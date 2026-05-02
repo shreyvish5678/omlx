@@ -178,6 +178,7 @@
                                         {{ bench_th('bench.results.single.tg_tps', 'bench.metrics.tg_tps.tooltip') }}
                                         {{ bench_th('bench.results.single.e2e_latency', 'bench.metrics.e2e.tooltip') }}
                                         {{ bench_th('bench.results.single.throughput', 'bench.metrics.throughput.tooltip') }}
+                                        <th x-show="benchSingleResults.some(r => r.dflash_acceptance_ratio !== undefined)" class="px-4 py-3 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">DFlash</th>
                                         {{ bench_th('bench.results.single.peak_mem', 'bench.metrics.peak_mem.tooltip') }}
                                     </tr>
                                 </thead>
@@ -191,6 +192,7 @@
                                             <td class="px-4 py-3 text-right tabular-nums font-medium text-neutral-900" x-text="r.gen_tps.toFixed(1) + ' tok/s'"></td>
                                             <td class="px-4 py-3 text-right tabular-nums text-neutral-700" x-text="r.e2e_latency_s.toFixed(3) + 's'"></td>
                                             <td class="px-4 py-3 text-right tabular-nums text-neutral-700" x-text="r.total_throughput.toFixed(1) + ' tok/s'"></td>
+                                            <td x-show="benchSingleResults.some(row => row.dflash_acceptance_ratio !== undefined)" class="px-4 py-3 text-right tabular-nums text-neutral-700" x-text="r.dflash_acceptance_ratio !== undefined ? ((r.dflash_acceptance_ratio * 100).toFixed(1) + '% / ' + (r.dflash_tokens_per_cycle || 0).toFixed(1) + ' tpc') : '-'"></td>
                                             <td class="px-4 py-3 text-right tabular-nums text-neutral-700" x-text="benchFormatMemory(r.peak_memory_bytes)"></td>
                                         </tr>
                                     </template>

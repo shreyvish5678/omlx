@@ -2236,7 +2236,10 @@
                     lines.push('');
                     lines.push('Single Request Results');
                     lines.push('-'.repeat(80));
-                    const hdr = [rpad('Test', 16), pad('TTFT(ms)', 10), pad('TPOT(ms)', 10), pad('pp TPS', 12), pad('tg TPS', 12), pad('E2E(s)', 10), pad('Throughput', 12), pad('Peak Mem', 10)];
+                    const hasDFlash = this.benchSingleResults.some(r => r.dflash_acceptance_ratio !== undefined);
+                    const hdr = [rpad('Test', 16), pad('TTFT(ms)', 10), pad('TPOT(ms)', 10), pad('pp TPS', 12), pad('tg TPS', 12), pad('E2E(s)', 10), pad('Throughput', 12)];
+                    if (hasDFlash) hdr.push(pad('DFlash', 18));
+                    hdr.push(pad('Peak Mem', 10));
                     lines.push(hdr.join('  '));
                     for (const r of this.benchSingleResults) {
                         const row = [
@@ -2247,8 +2250,14 @@
                             pad(r.gen_tps.toFixed(1) + ' tok/s', 12),
                             pad(r.e2e_latency_s.toFixed(3), 10),
                             pad(r.total_throughput.toFixed(1) + ' tok/s', 12),
-                            pad(this.benchFormatMemory(r.peak_memory_bytes), 10),
                         ];
+                        if (hasDFlash) {
+                            const dflash = r.dflash_acceptance_ratio !== undefined
+                                ? `${(r.dflash_acceptance_ratio * 100).toFixed(1)}% / ${(r.dflash_tokens_per_cycle || 0).toFixed(1)} tpc`
+                                : '-';
+                            row.push(pad(dflash, 18));
+                        }
+                        row.push(pad(this.benchFormatMemory(r.peak_memory_bytes), 10));
                         lines.push(row.join('  '));
                     }
                 }

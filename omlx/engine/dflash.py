@@ -24,7 +24,7 @@ from .base import BaseEngine, GenerationOutput
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MAX_DFLASH_CTX = 4096
+DEFAULT_MAX_DFLASH_CTX = 262144
 
 
 class DFlashEngine(BaseEngine):
@@ -315,7 +315,16 @@ class DFlashEngine(BaseEngine):
                         "prompt_tokens": event.get("prompt_token_count", 0),
                         "completion_tokens": gen_tokens,
                         "acceptance_ratio": accept_ratio,
+                        "accepted_from_draft": event.get("accepted_from_draft", 0),
                         "cycles_completed": cycles,
+                        "tokens_per_cycle": event.get(
+                            "tokens_per_cycle",
+                            gen_tokens / cycles if cycles else 0,
+                        ),
+                        "block_tokens": event.get("block_tokens", 0),
+                        "phase_timings_us": event.get("phase_timings_us", {}),
+                        "fallback_ar": fallback,
+                        "fallback_reason": event.get("fallback_reason"),
                     }
                     asyncio.run_coroutine_threadsafe(
                         queue.put(("", [], True, metrics)), loop
@@ -487,6 +496,7 @@ class DFlashEngine(BaseEngine):
                 completion_tokens=total_completion,
                 finished=finished,
                 finish_reason=finish_reason,
+                metrics=metrics or {},
             )
 
             if finished:
